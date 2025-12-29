@@ -1,154 +1,161 @@
 (() => {
-  const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-  // ---------- Header solid on scroll ----------
-  const header = document.getElementById("siteHeader");
-  const setHeader = () => {
+  // ----- header solid on scroll
+  const header = $("#siteHeader");
+  const onScrollHeader = () => {
     if (!header) return;
-    header.classList.toggle("is-solid", window.scrollY > 10);
+    header.classList.toggle("is-solid", window.scrollY > 12);
   };
-  setHeader();
-  window.addEventListener("scroll", setHeader, { passive: true });
+  window.addEventListener("scroll", onScrollHeader, { passive: true });
+  onScrollHeader();
 
-  // ---------- Desktop dropdown (Specialties) ----------
-  const ddBtn = document.getElementById("specialtiesDropdownBtn");
-  const ddMenu = document.getElementById("specialtiesDropdownMenu");
-  const navItem = ddBtn ? ddBtn.closest(".nav-item") : null;
+  // ----- mobile menu overlay
+  const menuBtn = $("#menuBtn");
+  const closeMenuBtn = $("#closeMenuBtn");
+  const menuOverlay = $("#menuOverlay");
 
-  function closeDropdown() {
-    if (!navItem || !ddBtn) return;
-    navItem.classList.remove("open");
-    ddBtn.setAttribute("aria-expanded", "false");
-  }
-
-  if (ddBtn && ddMenu && navItem) {
-    ddBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const open = navItem.classList.toggle("open");
-      ddBtn.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-
-    document.addEventListener("click", closeDropdown);
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeDropdown();
-    });
-  }
-
-  // ---------- Mobile menu overlay ----------
-  const menuBtn = document.getElementById("menuBtn");
-  const menuOverlay = document.getElementById("menuOverlay");
-  const closeMenuBtn = document.getElementById("closeMenuBtn");
-
-  function openMenu() {
+  const openMenu = () => {
     if (!menuOverlay) return;
     menuOverlay.classList.add("open");
     menuOverlay.setAttribute("aria-hidden", "false");
-    if (menuBtn) menuBtn.setAttribute("aria-expanded", "true");
-    document.body.style.overflow = "hidden";
-  }
+    menuBtn?.setAttribute("aria-expanded", "true");
+    document.documentElement.style.overflow = "hidden";
+  };
 
-  function closeMenu() {
+  const closeMenu = () => {
     if (!menuOverlay) return;
     menuOverlay.classList.remove("open");
     menuOverlay.setAttribute("aria-hidden", "true");
-    if (menuBtn) menuBtn.setAttribute("aria-expanded", "false");
-    document.body.style.overflow = "";
-  }
+    menuBtn?.setAttribute("aria-expanded", "false");
+    document.documentElement.style.overflow = "";
+  };
 
-  if (menuBtn) menuBtn.addEventListener("click", openMenu);
-  if (closeMenuBtn) closeMenuBtn.addEventListener("click", closeMenu);
-  if (menuOverlay) {
-    menuOverlay.addEventListener("click", (e) => {
-      if (e.target === menuOverlay) closeMenu();
-    });
-  }
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMenu();
+  menuBtn?.addEventListener("click", openMenu);
+  closeMenuBtn?.addEventListener("click", closeMenu);
+  menuOverlay?.addEventListener("click", (e) => {
+    if (e.target === menuOverlay) closeMenu();
   });
 
-  // ---------- Reveal on scroll ----------
-  const reveals = Array.from(document.querySelectorAll(".reveal"));
-  if (!prefersReduced && "IntersectionObserver" in window) {
+  // ----- specialties dropdown (desktop)
+  const ddBtn = $("#specialtiesDropdownBtn");
+  const ddMenu = $("#specialtiesDropdownMenu");
+  const ddWrap = ddBtn?.closest(".nav-item");
+
+  const closeDropdown = () => {
+    ddWrap?.classList.remove("open");
+    ddBtn?.setAttribute("aria-expanded", "false");
+  };
+
+  ddBtn?.addEventListener("click", () => {
+    const isOpen = ddWrap?.classList.toggle("open");
+    ddBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!ddWrap) return;
+    if (!ddWrap.contains(e.target)) closeDropdown();
+  });
+
+  // ----- reveal on scroll
+  const revealEls = $$(".reveal");
+  if (revealEls.length) {
     const io = new IntersectionObserver(
       (entries) => {
-        for (const ent of entries) {
-          if (ent.isIntersecting) {
-            ent.target.classList.add("is-visible");
-            io.unobserve(ent.target);
-          }
-        }
-      },
-      { threshold: 0.12 }
-    );
-    reveals.forEach((el) => io.observe(el));
-  } else {
-    reveals.forEach((el) => el.classList.add("is-visible"));
-  }
-
-  // ---------- Back to top ----------
-  const backToTop = document.getElementById("backToTop");
-  const setBtt = () => {
-    if (!backToTop) return;
-    backToTop.classList.toggle("show", window.scrollY > 700);
-  };
-  setBtt();
-  window.addEventListener("scroll", setBtt, { passive: true });
-  if (backToTop) backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
-
-  // ---------- Hero slider + parallax ----------
-  const hero = document.getElementById("hero");
-  if (hero) {
-    const slides = Array.from(hero.querySelectorAll(".hero-slide"));
-    const dots = Array.from(hero.querySelectorAll(".dot"));
-    const prev = document.getElementById("heroPrev");
-    const next = document.getElementById("heroNext");
-
-    if (slides.length) {
-      let index = slides.findIndex((s) => s.classList.contains("is-active"));
-      if (index < 0) index = 0;
-
-      const AUTOPLAY = true;        // change to false if you want
-      const AUTOPLAY_MS = 5500;
-
-      function setActive(i) {
-        index = (i + slides.length) % slides.length;
-        slides.forEach((s, k) => s.classList.toggle("is-active", k === index));
-        dots.forEach((d, k) => {
-          d.classList.toggle("is-active", k === index);
-          d.setAttribute("aria-current", k === index ? "true" : "false");
+        entries.forEach((en) => {
+          if (en.isIntersecting) en.target.classList.add("is-visible");
         });
-      }
-
-      dots.forEach((d, k) => d.addEventListener("click", () => setActive(k)));
-      if (prev) prev.addEventListener("click", () => setActive(index - 1));
-      if (next) next.addEventListener("click", () => setActive(index + 1));
-
-      // autoplay
-      let t = null;
-      if (AUTOPLAY && !prefersReduced) {
-        t = setInterval(() => setActive(index + 1), AUTOPLAY_MS);
-        hero.addEventListener("mouseenter", () => t && clearInterval(t));
-        hero.addEventListener("mouseleave", () => (t = setInterval(() => setActive(index + 1), AUTOPLAY_MS)));
-      }
-
-      // parallax: move active slide image slightly on scroll
-      const parallax = () => {
-        if (prefersReduced) return;
-        const active = slides[index];
-        const img = active ? active.querySelector("img") : null;
-        if (!img) return;
-        const y = window.scrollY * 0.18; // strength
-        img.style.transform = `translate3d(0, ${y}px, 0) scale(1.06)`;
-      };
-      parallax();
-      window.addEventListener("scroll", parallax, { passive: true });
-    }
+      },
+      { threshold: 0.15 }
+    );
+    revealEls.forEach((el) => io.observe(el));
   }
 
-  // ---------- Active nav highlight ----------
-  const path = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-  document.querySelectorAll("[data-nav]").forEach((a) => {
-    const href = (a.getAttribute("href") || "").toLowerCase();
-    if (href === path) a.classList.add("is-active");
+  // ----- hero slider
+  const slides = $$(".hero-slide");
+  const dots = $$(".dot");
+  const prev = $("#heroPrev");
+  const next = $("#heroNext");
+  let idx = 0;
+  let timer = null;
+
+  const setSlide = (i) => {
+    if (!slides.length) return;
+    idx = (i + slides.length) % slides.length;
+
+    slides.forEach((s, k) => s.classList.toggle("is-active", k === idx));
+    dots.forEach((d, k) => {
+      d.classList.toggle("is-active", k === idx);
+      d.setAttribute("aria-current", k === idx ? "true" : "false");
+    });
+  };
+
+  const startAuto = () => {
+    if (timer) clearInterval(timer);
+    if (slides.length <= 1) return;
+    timer = setInterval(() => setSlide(idx + 1), 4500);
+  };
+
+  dots.forEach((d, k) => d.addEventListener("click", () => { setSlide(k); startAuto(); }));
+  prev?.addEventListener("click", () => { setSlide(idx - 1); startAuto(); });
+  next?.addEventListener("click", () => { setSlide(idx + 1); startAuto(); });
+
+  // simple parallax feel (move active image slightly)
+  const parallax = () => {
+    const activeImg = $(".hero-slide.is-active img");
+    if (!activeImg) return;
+    const y = Math.min(24, window.scrollY * 0.06);
+    activeImg.style.transform = `scale(1.06) translateY(${y}px)`;
+  };
+  window.addEventListener("scroll", parallax, { passive: true });
+  setSlide(0);
+  startAuto();
+  parallax();
+
+  // ----- modal
+  const modal = $("#modal");
+  const modalBody = $("#modalBody");
+  const modalTitle = $("#modalTitle");
+  const modalClose = $("#modalClose");
+
+  const openModal = (title, html) => {
+    if (!modal) return;
+    modalTitle.textContent = title;
+    modalBody.innerHTML = html;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    document.documentElement.style.overflow = "hidden";
+  };
+
+  const closeModal = () => {
+    if (!modal) return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    document.documentElement.style.overflow = "";
+  };
+
+  modalClose?.addEventListener("click", closeModal);
+  modal?.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+  $$("[data-modal]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const type = btn.getAttribute("data-modal");
+      if (type === "order") {
+        openModal("Order Online", `<p class="muted">Demo only. Add your real ordering link later.</p>`);
+      } else {
+        openModal("Book a Table", `<p class="muted">Demo only. Add booking form / WhatsApp / phone link.</p>`);
+      }
+    });
   });
+
+  // ----- back to top
+  const backToTop = $("#backToTop");
+  const onScrollTop = () => {
+    backToTop?.classList.toggle("show", window.scrollY > 500);
+  };
+  window.addEventListener("scroll", onScrollTop, { passive: true });
+  onScrollTop();
+  backToTop?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 })();
